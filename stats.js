@@ -15,24 +15,19 @@ process.argv.unshift(node);
 // this needs to be an abs path, or relative to the cd
 var config = require(config_file).config;
 
-// this is a TinySpeck specific way of getting the hostname, when
-// one wasn't specified in the config. we do this for most hosts,
-// but we use the config where we're running multiple statsd's on
-// a single server
 if (!config.hostname){
-        var hostname = fs.readFileSync('/etc/tshost', 'utf8');
-        hostname = hostname.replace(/\s+$/, '');
-        config.hostname = hostname;
+  config.hostname = '';
 }
 
 // daemonize
 require('service').run({
-        lockFile: config.lock_file,
-        logFile : config.log_file,
+  lockFile: config.lock_file,
+  logFile : config.log_file,
 });
 
 var counters = {};
 var timers = {};
+var gauges = {};
 var debugInt, flushInt, server;
 
 var run = function(config){
@@ -69,7 +64,11 @@ var run = function(config){
             sys.log('Bad line: ' + fields);
             continue;
         }
-        if (fields[1].trim() == "ms") {
+        if (fields[1].trim() == "g") {
+            if (!gauges[key])
+                gauges[key] = [];
+            gauges[key].push([fields[0], Math.round(Date.now() / 1000)]);
+        } else if (fields[1].trim() == "ms") {
           if (! timers[key]) {
             timers[key] = [];
           }
@@ -141,6 +140,13 @@ var run = function(config){
 
           numStats += 1;
         }
+      }
+
+      for (var key in gauges) {
+         statString += gauges[key].map(function(value) {
+             numStats += 1;
+             return 'stats.' + key + ' ' + value[0] + ' ' + value[1] + '\n';
+         }).join("");
       }
 
       statString += 'statsd.' + config.hostname + '.numStats ' + numStats + ' ' + ts + "\n";

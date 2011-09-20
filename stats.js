@@ -25,7 +25,7 @@ var counters = {};
 var timers = {};
 var gauges = {};
 var debugInt, flushInt, server;
-var _makeArray = function(nonarray) { return Array.prototype.slice.call(nonarray); },
+var _makeArray = function(nonarray) { return Array.prototype.slice.call(nonarray); };
 var nonNull = function(el) { return !!el };
 // make a graphite key, assumes the last two args are value and timestamp
 // and everything before that is a key to be joined by '.'

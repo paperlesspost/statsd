@@ -29,14 +29,13 @@ end
 
 namespace :deploy do
  task :start do
-   run "#{current_path}/stats.js '#{current_path}/config.js' \"$@\""
+   run "#{current_path}/stats.js '#{current_path}/config.js' start"
  end
  task :stop do
-   run "if [ -e #{lock_file}]; then kill `cat #{lock_file}`; fi;"
+   run "#{current_path}/stats.js '#{current_path}/config.js' stop"
  end
  task :restart, :roles => :app, :except => { :no_release => true } do
-   stop
-   start
+   run "#{current_path}/stats.js '#{current_path}/restart' stop"
  end
 end
 

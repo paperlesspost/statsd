@@ -26,8 +26,8 @@ task :staging do
   set :graphite_port, 2003
   set :graphite_host, 'graphite01-staging'
   set :statsd_port, 8125
-  set :lock_file, '/var/run/statsd.pid'
-  set :log_file, '/var/log/statsd.log'
+  set :lock_file, lambda { "#{shared_path}/pids/statsd.pid" }
+  set :log_file, lambda { "#{shared_path}/log/statsd.log" }
   set :flush_interval, 10000
 end
 

@@ -15,10 +15,6 @@ process.argv.unshift(node);
 // this needs to be an abs path, or relative to the cd
 var config = require(config_file).config;
 
-if (!config.hostname){
-  config.hostname = '';
-}
-
 // daemonize
 require('service').run({
   lockFile: config.lock_file,
@@ -29,17 +25,28 @@ var counters = {};
 var timers = {};
 var gauges = {};
 var debugInt, flushInt, server;
+var _makeArray = function(nonarray) { return Array.prototype.slice.call(nonarray); },
+var nonNull = function(el) { return !!el };
+// make a graphite key, assumes the last two args are value and timestamp
+// and everything before that is a key to be joined by '.'
+var makeGraphiteKey = function() {
+  var args = _makeArray(arguments);
+  var ts = args.pop(),
+      val = args.pop();
+
+  return [args.filter(nonNull).join('.'), val, ts].join(' ');
+};
 
 var run = function(config){
 
-  if (! config.debug && debugInt) {
-    clearInterval(debugInt); 
+  if (!config.debug && debugInt) {
+    clearInterval(debugInt);
     debugInt = false;
   }
 
   if (config.debug) {
     if (debugInt !== undefined) { clearInterval(debugInt); }
-    debugInt = setInterval(function () { 
+    debugInt = setInterval(function () {
       sys.log("Counters:\n" + sys.inspect(counters) + "\nTimers:\n" + sys.inspect(timers));
     }, config.debugInterval || 10000);
   }
@@ -65,8 +72,9 @@ var run = function(config){
             continue;
         }
         if (fields[1].trim() == "g") {
-            if (!gauges[key])
-                gauges[key] = [];
+            if (!gauges[key]) {
+              gauges[key] = [];
+            }
             gauges[key].push([fields[0], Math.round(Date.now() / 1000)]);
         } else if (fields[1].trim() == "ms") {
           if (! timers[key]) {
@@ -98,8 +106,8 @@ var run = function(config){
       for (key in counters) {
         var value = counters[key] / (flushInterval / 1000);
         var message = "";
-        message += 'stats.counters.' + key + '.' + config.hostname + '.value ' + value + ' ' + ts + "\n";
-        message += 'stats.counters.' + key + '.' + config.hostname + '.count ' + counters[key] + ' ' + ts + "\n";
+        message += makeGraphiteKey('stats.counters', key, config.hostname, 'value', value, ts) + "\n";
+        message += makeGraphiteKey('stats.counters', key, config.hostname, 'count', counters[key], ts) + "\n";
         statString += message;
         counters[key] = 0;
 
@@ -115,26 +123,26 @@ var run = function(config){
           var min = values[0];
           var max = values[count - 1];
 
-          var percent_values = {};
-          for (var i=0; i<percents.length; i++) {
+          var percent_values = {}, i = 0, l = percents.length;
+          for (; i < l; i++) {
             var idx = (count - Math.round(((100 - percents[i]) / 100) * count)) - 1;
             if (idx < 0) idx = 0;
             percent_values["percent_"+percents[i]] = values[idx];
           }
 
-          var sum = 0;
-          for (var i=0; i<count; i++) sum += values[i];
+          var sum = 0, i = 0;
+          for (; i < count; i++) sum += values[i];
           var mean = sum / count;
 
           timers[key] = [];
 
           var message = "";
-          message += 'stats.timers.' + key + '.' + config.hostname + '.min ' + min + ' ' + ts + "\n";
-          message += 'stats.timers.' + key + '.' + config.hostname + '.max ' + max + ' ' + ts + "\n";
-          message += 'stats.timers.' + key + '.' + config.hostname + '.mean ' + mean + ' ' + ts + "\n";
-          message += 'stats.timers.' + key + '.' + config.hostname + '.count ' + count + ' ' + ts + "\n";
+          message += makeGraphiteKey('stats.timers', key, config.hostname, 'min', min, ts) + "\n";
+          message += makeGraphiteKey('stats.timers', key, config.hostname, 'max', max, ts) + "\n";
+          message += makeGraphiteKey('stats.timers', key, config.hostname, 'mean', mean, ts) + "\n";
+          message += makeGraphiteKey('stats.timers', key, config.hostname, 'count', count, ts) + "\n";
           for (var i in percent_values) {
-            message += 'stats.timers.' + key + '.' + config.hostname + '.' + i + ' ' + percent_values[i] + ' ' + ts + "\n";
+            message += makeGraphiteKey('stats.timers', key, config.hostname, i, percent_values[i], ts) + "\n";
           }
           statString += message;
 
@@ -145,11 +153,11 @@ var run = function(config){
       for (var key in gauges) {
          statString += gauges[key].map(function(value) {
              numStats += 1;
-             return 'stats.' + key + ' ' + value[0] + ' ' + value[1] + '\n';
-         }).join("");
+             return makeGraphiteKey('stats.gauges', key, value[0], value[1]);
+         }).join("\n") + "\n";
       }
 
-      statString += 'statsd.' + config.hostname + '.numStats ' + numStats + ' ' + ts + "\n";
+      statString += makeGraphiteKey('statsd', config.hostname, '.numStats', numStats, ts) + "\n";
 
       try {
         var graphite = net.createConnection(config.graphitePort, config.graphiteHost);

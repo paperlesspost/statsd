@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/bin/env node
 
 var dgram  = require('dgram')
   , sys    = require('sys')

@@ -157,7 +157,7 @@ var run = function(config){
          }).join("\n") + "\n";
       }
 
-      statString += makeGraphiteKey('statsd', config.hostname, '.numStats', numStats, ts) + "\n";
+      statString += makeGraphiteKey('statsd', config.hostname, 'numStats', numStats, ts) + "\n";
 
       try {
         var graphite = net.createConnection(config.graphitePort, config.graphiteHost);

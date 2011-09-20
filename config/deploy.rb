@@ -35,7 +35,7 @@ namespace :deploy do
    run "#{current_path}/stats.js '#{current_path}/config.js' stop"
  end
  task :restart, :roles => :app, :except => { :no_release => true } do
-   run "#{current_path}/stats.js '#{current_path}/restart' stop"
+   run "#{current_path}/stats.js '#{current_path}/config.js' restart"
  end
 end
 

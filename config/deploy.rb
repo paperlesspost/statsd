@@ -24,7 +24,7 @@ task :staging do
   role :app, '10.0.0.172', :primary => true
 
   set :graphite_port, 2003
-  set :graphite_host, 'graphite01'
+  set :graphite_host, 'graphite01-staging.pp.local'
   set :statsd_port, 8125
   set :lock_file, lambda { "#{shared_path}/pids/statsd.pid" }
   set :log_file, lambda { "#{shared_path}/log/statsd.log" }

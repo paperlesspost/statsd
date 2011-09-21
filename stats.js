@@ -21,6 +21,8 @@ require('service').run({
   logFile : config.log_file,
 });
 
+sys.log(config);
+
 var counters = {};
 var timers = {};
 var gauges = {};

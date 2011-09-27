@@ -14,7 +14,7 @@ set :normalize_asset_timestamps, false
 namespace :statsd do
   task :install_modules do
     run "cd #{shared_path} && npm install service"
-    run "ln -nfs #{shared_path}/node_modules #{current_path}/node_modules"
+    run "rm -rf #{current_path}/node_modules && ln -nfs #{shared_path}/node_modules #{current_path}/node_modules"
   end
 
   task :write_config do

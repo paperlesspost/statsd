@@ -47,7 +47,7 @@ end
 namespace :deploy do
  [:start, :stop, :restart].each do |command|
    task command, :roles => :app, :except => { :no_release => true } do
-     run "cd #{current_path} && ./stats.js '#{current_path}/config.js' #{command}"
+     run "cd #{current_path} && ./stats.js ./config.js' #{command}"
    end
   end
 end

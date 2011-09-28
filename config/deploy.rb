@@ -1,7 +1,5 @@
 require 'erb'
 
-default_run_options[:pty] = true
-
 set :application, "statsd"
 set :deploy_to, '/var/daemons/statsd'
 set :deploy_via, :remote_cache
@@ -26,11 +24,12 @@ task :production do
   role :app, 'statsd01.pp.local', :primary => true
 
   set :graphite_port, 2003
-  set :graphite_host, '10.0.0.242'
+  set :graphite_host, 'graphite01.pp.local'
   set :statsd_port, 8125
   set :lock_file, lambda { "#{shared_path}/pids/statsd.pid" }
   set :log_file, lambda { "#{shared_path}/log/statsd.log" }
   set :flush_interval, 10000
+  set :debug, true
 end
 
 task :staging do
@@ -47,7 +46,7 @@ end
 namespace :deploy do
  [:start, :stop, :restart].each do |command|
    task command, :roles => :app, :except => { :no_release => true } do
-     run "cd #{current_path} && ./stats.js ./config.js' #{command}"
+     run "cd #{current_path} && ./stats.js ./config.js #{command}"
    end
   end
 end

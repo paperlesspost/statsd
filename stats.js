@@ -157,7 +157,10 @@ var run = function(config){
              numStats += 1;
              return makeGraphiteKey('stats.gauges', key, value[0], value[1]);
          }).join("\n") + "\n";
+
+         delete gauges[key];
       }
+
 
       statString += makeGraphiteKey('statsd', config.hostname, 'numStats', numStats, ts) + "\n";
 

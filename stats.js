@@ -15,14 +15,6 @@ process.argv.unshift(node);
 // this needs to be an abs path, or relative to the cd
 var config = require(config_file).config;
 
-// daemonize
-require('service').run({
-  lockFile: config.lock_file,
-  logFile : config.log_file,
-});
-
-sys.log(config);
-
 var counters = {};
 var timers = {};
 var gauges = {};

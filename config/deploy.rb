@@ -10,11 +10,6 @@ set :use_sudo, false
 set :normalize_asset_timestamps, false
 
 namespace :statsd do
-  task :install_modules do
-    run "cd #{shared_path} && npm install service"
-    run "rm -rf #{current_path}/node_modules && ln -nfs #{shared_path}/node_modules #{current_path}/node_modules"
-  end
-
   task :write_config do
     put ERB.new(File.read("config.js.erb")).result(binding), "#{release_path}/config.js", :via => :scp
   end
@@ -52,4 +47,3 @@ namespace :deploy do
 end
 
 after "deploy:update_code", "statsd:write_config"
-after "deploy:symlink", "statsd:install_modules"

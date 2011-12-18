@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 var dgram  = require('dgram')
-  , sys    = require('sys')
+  , util    = require('util')
   , net    = require('net')
   , fs     = require('fs')
 
@@ -41,13 +41,13 @@ var run = function(config){
   if (config.debug) {
     if (debugInt !== undefined) { clearInterval(debugInt); }
     debugInt = setInterval(function () {
-      sys.log("Counters:\n" + sys.inspect(counters) + "\nTimers:\n" + sys.inspect(timers));
+      util.log("Counters:\n" + util.inspect(counters) + "\nTimers:\n" + sys.inspect(timers));
     }, config.debugInterval || 10000);
   }
 
   if (server === undefined) {
     server = dgram.createSocket('udp4', function (msg, rinfo) {
-      if (config.dumpMessages) { sys.log(msg.toString()); }
+      if (config.dumpMessages) { util.log(msg.toString()); }
       var bits = msg.toString().split(':');
       var key = bits.shift()
                     .replace(/\s+/g, '_')
@@ -62,7 +62,7 @@ var run = function(config){
         var sampleRate = 1;
         var fields = bits[i].split("|");
         if (fields[1] === undefined) {
-            sys.log('Bad line: ' + fields);
+            util.log('Bad line: ' + fields);
             continue;
         }
         if (fields[1].trim() == "g") {
@@ -161,7 +161,7 @@ var run = function(config){
         graphite.on('error', function() {
           //log error'd stats in case we want to get them later
           //this is a common case - we shouldn't go down just because graphite is down
-          sys.log(statString);
+          util.log(statString);
         });
         graphite.on('connect', function() {
           this.write(statString);
@@ -170,7 +170,7 @@ var run = function(config){
       } catch(e){
         // no big deal
         //log error'd stats in case we want to get them later
-        sys.log(statString);
+        util.log(statString);
       }
 
     }, flushInterval);

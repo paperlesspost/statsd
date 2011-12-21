@@ -42,7 +42,7 @@ var run = function(config){
   if (config.debug) {
     if (debugInt !== undefined) { clearInterval(debugInt); }
     debugInt = setInterval(function () {
-      util.log("Counters:\n" + util.inspect(counters) + "\nTimers:\n" + sys.inspect(timers));
+      util.log("Counters:\n" + util.inspect(counters) + "\nTimers:\n" + util.inspect(timers));
     }, config.debugInterval || 10000);
   }
 

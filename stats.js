@@ -18,6 +18,7 @@ var config = require(config_file).config;
 var counters = {};
 var timers = {};
 var gauges = {};
+var gauges_sent = {};
 var debugInt, flushInt, server;
 var _makeArray = function(nonarray) { return Array.prototype.slice.call(nonarray); };
 var nonNull = function(el) { return !!el };
@@ -66,8 +67,9 @@ var run = function(config){
             continue;
         }
         if (fields[1].trim() == "g") {
-            if (!gauges[key]) {
+            if (!gauges[key] || gauges_sent[key]) {
               gauges[key] = [];
+              gauges_sent[key] = false;
             }
             gauges[key].push([fields[0], Math.round(Date.now() / 1000)]);
         } else if (fields[1].trim() == "ms") {
@@ -149,8 +151,7 @@ var run = function(config){
              numStats += 1;
              return makeGraphiteKey('stats.gauges', key, value[0], value[1]);
          }).join("\n") + "\n";
-
-         delete gauges[key];
+         gauges_sent[key] = true;
       }
 
 

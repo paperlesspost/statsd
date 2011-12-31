@@ -42,13 +42,13 @@ var run = function(config){
   if (config.debug) {
     if (debugInt !== undefined) { clearInterval(debugInt); }
     debugInt = setInterval(function () {
-      util.log("Counters:\n" + util.inspect(counters) + "\nTimers:\n" + util.inspect(timers));
+      console.log("Counters:\n" + util.inspect(counters) + "\nTimers:\n" + util.inspect(timers));
     }, config.debugInterval || 10000);
   }
 
   if (server === undefined) {
     server = dgram.createSocket('udp4', function (msg, rinfo) {
-      if (config.dumpMessages) { util.log(msg.toString()); }
+      if (config.dumpMessages) { console.log(msg.toString()); }
       var bits = msg.toString().split(':');
       var key = bits.shift()
                     .replace(/\s+/g, '_')
@@ -63,7 +63,7 @@ var run = function(config){
         var sampleRate = 1;
         var fields = bits[i].split("|");
         if (fields[1] === undefined) {
-            util.log('Bad line: ' + fields);
+            console.log('Bad line: ' + fields);
             continue;
         }
         if (fields[1].trim() == "g") {
@@ -159,10 +159,11 @@ var run = function(config){
 
       try {
         var graphite = net.createConnection(config.graphitePort, config.graphiteHost);
-        graphite.on('error', function() {
+        graphite.on('error', function(err) {
           //log error'd stats in case we want to get them later
           //this is a common case - we shouldn't go down just because graphite is down
-          util.log(statString);
+          console.log('error', err);
+          console.log(statString);
         });
         graphite.on('connect', function() {
           this.write(statString);
@@ -171,9 +172,11 @@ var run = function(config){
       } catch(e){
         // no big deal
         //log error'd stats in case we want to get them later
-        util.log(statString);
+        console.log("Error: " + e);
+        console.log(statString);
       }
 
+      console.log(util.inspect(process.memoryUsage()));
     }, flushInterval);
   }
 

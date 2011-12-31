@@ -1,8 +1,6 @@
 exports.config = {
   graphitePort: 2003,
-  graphiteHost: 'graphite1',
+  graphiteHost: 'graphite01.pp.local',
   port: 8125,
-  lock_file: '/var/run/statsd.pid',
-  log_file : '/var/log/statsd.log',
-  flushInterval: 60000,
+  flushInterval: 10000
 };

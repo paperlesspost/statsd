@@ -53,36 +53,34 @@ if (server === undefined) {
                   .replace(/\//g, '-')
                   .replace(/[^a-zA-Z_\-0-9\.]/g, '');
 
-    if (bits.length == 0) {
-      bits.push("1");
-    }
-
-    for (var i = 0; i < bits.length; i++) {
-      var sampleRate = 1;
-      var fields = bits[i].split("|");
-      if (fields[1] === undefined) {
+    if (key && bits.length >= 1) {
+      for (var i = 0; i < bits.length; i++) {
+        var sampleRate = 1;
+        var fields = bits[i].split("|");
+        if (fields[1] === undefined) {
           console.log('Bad line: ' + fields);
-          continue;
-      }
-      if (fields[1].trim() == "g") {
-          if (!gauges[key] || gauges_sent[key]) {
-            gauges[key] = [];
-            gauges_sent[key] = false;
+          return null;
+        }
+        if (fields[1].trim() == "g") {
+            if (!gauges[key] || gauges_sent[key]) {
+              gauges[key] = [];
+              gauges_sent[key] = false;
+            }
+            gauges[key].push([fields[0], Math.round(Date.now() / 1000)]);
+        } else if (fields[1].trim() == "ms") {
+          if (!timers[key]) {
+            timers[key] = [];
           }
-          gauges[key].push([fields[0], Math.round(Date.now() / 1000)]);
-      } else if (fields[1].trim() == "ms") {
-        if (!timers[key]) {
-          timers[key] = [];
+          timers[key].push(Number(fields[0] || 0));
+        } else {
+          if (fields[2] && fields[2].match(/^@([\d\.]+)/)) {
+            sampleRate = Number(fields[2].match(/^@([\d\.]+)/)[1]);
+          }
+          if (!counters[key]) {
+            counters[key] = 0;
+          }
+          counters[key] += Number(fields[0] || 1) * (1 / sampleRate);
         }
-        timers[key].push(Number(fields[0] || 0));
-      } else {
-        if (fields[2] && fields[2].match(/^@([\d\.]+)/)) {
-          sampleRate = Number(fields[2].match(/^@([\d\.]+)/)[1]);
-        }
-        if (!counters[key]) {
-          counters[key] = 0;
-        }
-        counters[key] += Number(fields[0] || 1) * (1 / sampleRate);
       }
     }
   });

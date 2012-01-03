@@ -172,7 +172,7 @@ if (server === undefined) {
       console.log(statString);
     }
 
-    console.log("\n Stats string: ", statString.length, "counters", counters.length, "timers", timers.length, "gauges", gauges.length);
+    console.log("\n Stats string: ", statString.length, "counters", counters.toString().length, "timers", timers.toString().length, "gauges", gauges.toString().length);
     console.log("\n *** RSS: ", process.memoryUsage().rss / 1024 / 1024, "mb")
   }, flushInterval);
 }

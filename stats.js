@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 var dgram  = require('dgram')
-  , util    = require('util')
+  , util   = require('util')
   , net    = require('net')
   , fs     = require('fs')
 

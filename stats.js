@@ -32,64 +32,33 @@ var makeGraphiteKey = function() {
   return [args.filter(nonNull).join('.'), val, ts].join(' ');
 };
 
-if (!config.debug && debugInt) {
-  clearInterval(debugInt);
-  debugInt = false;
-}
+var Statsd = {
+  server: null,
+  flushInterval: null,
 
-if (config.debug) {
-  if (debugInt !== undefined) { clearInterval(debugInt); }
-  debugInt = setInterval(function () {
-    console.log("Counters:\n" + util.inspect(counters) + "\nTimers:\n" + util.inspect(timers));
-  }, config.debugInterval || 10000);
-}
-
-if (server === undefined) {
-  server = dgram.createSocket('udp4', function (msg, rinfo) {
-    if (config.dumpMessages) { console.log(msg.toString()); }
-    var bits = msg.toString().split(':');
-    var key = bits.shift()
-                  .replace(/\s+/g, '_')
-                  .replace(/\//g, '-')
-                  .replace(/[^a-zA-Z_\-0-9\.]/g, '');
-
-    if (key && bits.length >= 1) {
-      for (var i = 0; i < bits.length; i++) {
-        var sampleRate = 1;
-        var fields = bits[i].split("|");
-        if (fields[1] === undefined) {
-          console.log('Bad line: ' + fields);
-          return null;
-        }
-        if (fields[1].trim() == "g") {
-            if (!gauges[key] || gauges_sent[key]) {
-              gauges[key] = [];
-              gauges_sent[key] = false;
-            }
-            gauges[key].push([fields[0], Math.round(Date.now() / 1000)]);
-        } else if (fields[1].trim() == "ms") {
-          if (!timers[key]) {
-            timers[key] = [];
-          }
-          timers[key].push(Number(fields[0] || 0));
-        } else {
-          if (fields[2] && fields[2].match(/^@([\d\.]+)/)) {
-            sampleRate = Number(fields[2].match(/^@([\d\.]+)/)[1]);
-          }
-          if (!counters[key]) {
-            counters[key] = 0;
-          }
-          counters[key] += Number(fields[0] || 1) * (1 / sampleRate);
-        }
-      }
+  start: function() {
+    console.log('Statsd starting', Date().toString());
+    if (!this.server) {
+      var port = config.port || 8125;
+      this.server = dgram.createSocket('udp4', this.handleUDPMessage);
+      this.server.bind(port);
+      console.log("Listening for UDP packets on ", port);
     }
-  });
+    if (!this.flushInterval) {
+      var frequency = Number(config.flushInterval || 10000);
+      var statsd = this;
+      this.flushInterval = setInterval(function () {
+        var statString = statsd.processStats();
+        statsd.logStatus(statString);
+        process.nextTick(function() {
+          statsd.sendToGraphite(statString);
+        });
+      }, frequency);
+      console.log("Flushing to graphite every ", frequency);
+    }
+  },
 
-  server.bind(config.port || 8125);
-
-  var flushInterval = Number(config.flushInterval || 10000);
-
-  flushInt = setInterval(function () {
+  processStats: function() {
     var statString = '';
     var ts = Math.round(new Date().getTime() / 1000);
     var numStats = 0;
@@ -142,17 +111,20 @@ if (server === undefined) {
       }
     }
 
-    for (var key in gauges) {
+    for (key in gauges) {
        statString += gauges[key].map(function(value) {
-           numStats += 1;
-           return makeGraphiteKey('stats.gauges', key, value[0], value[1]);
+         numStats += 1;
+         return makeGraphiteKey('stats.gauges', key, value[0], value[1]);
        }).join("\n") + "\n";
        gauges_sent[key] = true;
     }
 
-
     statString += makeGraphiteKey('statsd', config.hostname, 'numStats', numStats, ts) + "\n";
 
+    return statsString;
+  },
+
+  sendToGraphite: function(statString) {
     try {
       var graphite = net.createConnection(config.graphitePort, config.graphiteHost);
       graphite.on('error', function(err) {
@@ -163,18 +135,62 @@ if (server === undefined) {
       });
       graphite.on('connect', function() {
         this.write(statString);
+        console.log('Wrote to graphite ', statString.length);
         this.end();
       });
     } catch(e){
-      // no big deal
       //log error'd stats in case we want to get them later
       console.log("Error: " + e);
       console.log(statString);
     }
+  },
 
+  handleUDPMessage: function (msg, rinfo) {
+    if (config.dumpMessages) { console.log(msg.toString()); }
+    var bits = msg.toString().split(':');
+    var key = bits.shift()
+                  .replace(/\s+/g, '_')
+                  .replace(/\//g, '-')
+                  .replace(/[^a-zA-Z_\-0-9\.]/g, '');
+
+    if (key && bits.length >= 1) {
+      var i = 0, l = bits.length;
+      for (; i < l; i++) {
+        var sampleRate = 1;
+        var fields = bits[i].split("|");
+        if (fields[1] === undefined) {
+          console.log('Bad line: ' + fields);
+          return null;
+        }
+        if (fields[1].trim() == "g") {
+            if (!gauges[key] || gauges_sent[key]) {
+              gauges[key] = [];
+              gauges_sent[key] = false;
+            }
+            gauges[key].push([fields[0], Math.round(Date.now() / 1000)]);
+        } else if (fields[1].trim() == "ms") {
+          if (!timers[key]) {
+            timers[key] = [];
+          }
+          timers[key].push(Number(fields[0] || 0));
+        } else {
+          if (fields[2] && fields[2].match(/^@([\d\.]+)/)) {
+            sampleRate = Number(fields[2].match(/^@([\d\.]+)/)[1]);
+          }
+          if (!counters[key]) {
+            counters[key] = 0;
+          }
+          counters[key] += Number(fields[0] || 1) * (1 / sampleRate);
+        }
+      }
+    }
+  },
+
+  logStatus: function(statsString) {
     console.log("\n Stats string: ", statString.length, "counters", counters.toString().length, "timers", timers.toString().length, "gauges", gauges.toString().length);
     console.log("\n *** RSS: ", process.memoryUsage().rss / 1024 / 1024, "mb")
-  }, flushInterval);
-}
+  }
+};
+
 // start it up
-console.log("Starting statsd...");
+Statsd.start();

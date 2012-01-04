@@ -125,18 +125,34 @@ var Statsd = {
 
   sendToGraphite: function(statString) {
     try {
-      var graphite = net.createConnection(config.graphitePort, config.graphiteHost);
-      graphite.on('error', function(err) {
-        //log error'd stats in case we want to get them later
-        //this is a common case - we shouldn't go down just because graphite is down
-        console.log('error', err);
-        console.log(statString);
-      });
-      graphite.on('connect', function() {
-        this.write(statString);
+      var statsd = this;
+      var close = function(graphite) {
+        console.log('Closing connection to graphite');
+        graphite.end();
+        delete statsd['graphite'];
+      };
+      var write = function(graphite) {
+        graphite.write(statString);
         console.log('Wrote to graphite ', statString.length);
-        this.end();
-      });
+      };
+      if (!statsd.graphite) {
+        statsd.graphite = net.createConnection(config.graphitePort, config.graphiteHost);
+        statsd.graphite.on('error', function(err) {
+          //log error'd stats in case we want to get them later
+          //this is a common case - we shouldn't go down just because graphite is down
+          console.log('error', err);
+          console.log(statString);
+          close(this);
+        });
+        statsd.graphite.on('end', function() { close(this); });
+        statsd.graphite.on('close', function() { close(this); });
+        statsd.graphite.on('connect', function() {
+          console.log('Opened new connection to graphite');
+          write(this)
+        });
+      } else {
+        write(statsd.graphite);
+      }
     } catch(e){
       //log error'd stats in case we want to get them later
       console.log("Error: " + e);
@@ -186,7 +202,7 @@ var Statsd = {
   },
 
   logStatus: function(statString) {
-    console.log("\n Stats string: ", statString.length, "counters", counters.toString().length, "timers", timers.toString().length, "gauges", gauges.toString().length);
+    console.log("\n Stats string: ", statString.length, "counters", util.inspect(counters).length, "timers", util.inspect(timers).length, "gauges", util.inspect(gauges).length);
     console.log("\n *** RSS: ", process.memoryUsage().rss / 1024 / 1024, "mb")
   }
 };

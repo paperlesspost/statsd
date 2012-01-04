@@ -46,7 +46,7 @@ var Statsd = {
     }
     if (!this.flushInt) {
       var statsd = this;
-      this.flushInt= setInterval(function () {
+      this.flushInt = setInterval(function () {
         var statString = statsd.processStats();
         statsd.logStatus(statString);
         process.nextTick(function() {

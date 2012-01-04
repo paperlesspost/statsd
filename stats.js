@@ -19,7 +19,6 @@ var counters = {};
 var timers = {};
 var gauges = {};
 var gauges_sent = {};
-var debugInt, flushInt, server;
 var _makeArray = function(nonarray) { return Array.prototype.slice.call(nonarray); };
 var nonNull = function(el) { return !!el };
 // make a graphite key, assumes the last two args are value and timestamp
@@ -34,27 +33,27 @@ var makeGraphiteKey = function() {
 
 var Statsd = {
   server: null,
-  flushInterval: null,
+  flushInt: null,
+  flushInterval: config.flushInterval || 10000,
+  port: config.port || 8125,
 
   start: function() {
     console.log('Statsd starting', Date().toString());
     if (!this.server) {
-      var port = config.port || 8125;
       this.server = dgram.createSocket('udp4', this.handleUDPMessage);
-      this.server.bind(port);
-      console.log("Listening for UDP packets on ", port);
+      this.server.bind(this.port);
+      console.log("Listening for UDP packets on", this.port);
     }
-    if (!this.flushInterval) {
-      var frequency = Number(config.flushInterval || 10000);
+    if (!this.flushInt) {
       var statsd = this;
-      this.flushInterval = setInterval(function () {
+      this.flushInt= setInterval(function () {
         var statString = statsd.processStats();
         statsd.logStatus(statString);
         process.nextTick(function() {
           statsd.sendToGraphite(statString);
         });
-      }, frequency);
-      console.log("Flushing to graphite every ", frequency);
+      }, this.flushInterval);
+      console.log("Flushing to graphite every", this.flushInterval);
     }
   },
 
@@ -65,7 +64,7 @@ var Statsd = {
     var key;
 
     for (key in counters) {
-      var value = counters[key] / (flushInterval / 1000);
+      var value = counters[key] / (this.flushInterval / 1000);
       var message = "";
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'value', value, ts) + "\n";
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'count', counters[key], ts) + "\n";
@@ -121,7 +120,7 @@ var Statsd = {
 
     statString += makeGraphiteKey('statsd', config.hostname, 'numStats', numStats, ts) + "\n";
 
-    return statsString;
+    return statString;
   },
 
   sendToGraphite: function(statString) {
@@ -186,7 +185,7 @@ var Statsd = {
     }
   },
 
-  logStatus: function(statsString) {
+  logStatus: function(statString) {
     console.log("\n Stats string: ", statString.length, "counters", counters.toString().length, "timers", timers.toString().length, "gauges", gauges.toString().length);
     console.log("\n *** RSS: ", process.memoryUsage().rss / 1024 / 1024, "mb")
   }

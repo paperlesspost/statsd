@@ -119,6 +119,7 @@ var Statsd = {
     }
 
     statString += makeGraphiteKey('statsd', config.hostname, 'numStats', numStats, ts) + "\n";
+    statString += makeGraphiteKey('statsd', config.hostname, 'statString', statString.length, ts) + "\n";
 
     return statString;
   },

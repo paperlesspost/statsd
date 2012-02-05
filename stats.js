@@ -69,16 +69,18 @@ var Statsd = {
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'value', value, ts) + "\n";
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'count', counters[key], ts) + "\n";
       statString += message;
-      delete counters[key];
+      counters[key] = 0;
 
       numStats += 1;
     }
 
     for (key in timers) {
       if (timers[key].length > 0) {
+        var timer = timers[key];
+        timers[key] = [];
         var percents = config.percents || [10,50,90];
 
-        var values = timers[key].sort(function (a,b) { return a-b; });
+        var values = timer.sort(function (a,b) { return a-b; });
         var count = values.length;
         var min = values[0];
         var max = values[count - 1];
@@ -93,8 +95,6 @@ var Statsd = {
         var sum = 0, i = 0;
         for (; i < count; i++) sum += values[i];
         var mean = sum / count;
-
-        delete timers[key];
 
         var message = "";
         message += makeGraphiteKey('stats.timers', key, config.hostname, 'min', min, ts) + "\n";

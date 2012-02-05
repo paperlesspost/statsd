@@ -136,7 +136,7 @@ var Statsd = {
       var write = function(graphite) {
         graphite.write(statString);
         console.log('Wrote to graphite ', statString.length);
-        stats.pipeline++;
+        statsd.pipeline++;
         if (statsd.pipeline > pipeline) {
           close(graphite);
           statsd.pipeline = 0;

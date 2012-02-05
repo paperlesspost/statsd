@@ -125,7 +125,9 @@ var Statsd = {
 
   sendToGraphite: function(statString) {
     try {
+      var pipeline = config.pipeline || 5;
       var statsd = this;
+      statsd.pipeline = statsd.pipeline || 0;
       var close = function(graphite) {
         console.log('Closing connection to graphite');
         graphite.end();
@@ -134,6 +136,11 @@ var Statsd = {
       var write = function(graphite) {
         graphite.write(statString);
         console.log('Wrote to graphite ', statString.length);
+        stats.pipeline++;
+        if (statsd.pipeline > pipeline) {
+          close(graphite);
+          statsd.pipeline = 0;
+        }
       };
       if (!statsd.graphite) {
         statsd.graphite = net.createConnection(config.graphitePort, config.graphiteHost);
@@ -148,7 +155,7 @@ var Statsd = {
         statsd.graphite.on('close', function() { close(this); });
         statsd.graphite.on('connect', function() {
           console.log('Opened new connection to graphite');
-          write(this)
+          write(this);
         });
       } else {
         write(statsd.graphite);

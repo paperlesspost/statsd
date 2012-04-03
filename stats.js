@@ -69,7 +69,7 @@ var Statsd = {
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'value', value, ts) + "\n";
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'count', counters[key], ts) + "\n";
       statString += message;
-      counters[key] = 0;
+      delete counters[key];
 
       numStats += 1;
     }
@@ -77,7 +77,7 @@ var Statsd = {
     for (key in timers) {
       if (timers[key].length > 0) {
         var timer = timers[key];
-        timers[key] = [];
+        delete timers[key];
         var percents = config.percents || [10,50,90];
 
         var values = timer.sort(function (a,b) { return a-b; });

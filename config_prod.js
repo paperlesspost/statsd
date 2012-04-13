@@ -1,6 +1,7 @@
 exports.config = {
   graphitePort: 2003,
-  graphiteHost: 'graphite01.pp.local',
+  graphiteHost: 'graphite10.pp.local',
   port: 8125,
+  dumpFile: 'dump.txt',
   flushInterval: 5000
 };

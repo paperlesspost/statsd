@@ -149,7 +149,7 @@ var Statsd = {
           //log error'd stats in case we want to get them later
           //this is a common case - we shouldn't go down just because graphite is down
           console.log('error', err);
-          console.log(statString);
+          statsd.writeToDumpFile(statString);
           close(this);
         });
         statsd.graphite.on('end', function() { close(this); });
@@ -212,8 +212,21 @@ var Statsd = {
   logStatus: function(statString) {
     console.log("\n Stats string: ", statString.length, "counters", util.inspect(counters).length, "timers", util.inspect(timers).length, "gauges", util.inspect(gauges).length);
     console.log("\n *** RSS: ", process.memoryUsage().rss / 1024 / 1024, "mb")
+  },
+
+  writeToDumpFile: function(statString) {
+    if (config.dumpFile) {
+      this.dumpStream = this.dumpStream || fs.createWriteStream(config.dumpFile, {flags: 'a', encoding: 'utf8', mode: 0666});
+      this.dumpStream.write("\n");
+      this.dumpStream.write(statString);
+      console.log('Wrote ', statString.length, 'to', config.dumpFile);
+    } else {
+      console.log(statString);
+    }
   }
 };
 
 // start it up
 Statsd.start();
+
+exports.Statsd = Statsd;

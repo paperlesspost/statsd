@@ -69,7 +69,11 @@ var Statsd = {
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'value', value, ts) + "\n";
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'count', counters[key], ts) + "\n";
       statString += message;
-      counters[key] = 0;
+      if (key.match(/\d/)) { // theirs an id in there
+        delete counters[key];
+      } else {
+        counters[key] = 0;
+      }
 
       numStats += 1;
     }
@@ -77,7 +81,7 @@ var Statsd = {
     for (key in timers) {
       if (timers[key].length > 0) {
         var timer = timers[key];
-        delete timers[key];
+        timers[key] = [];
         var percents = config.percents || [10,50,90];
 
         var values = timer.sort(function (a,b) { return a-b; });

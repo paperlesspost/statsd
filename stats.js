@@ -69,7 +69,7 @@ var Statsd = {
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'value', value, ts) + "\n";
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'count', counters[key], ts) + "\n";
       statString += message;
-      if (key.match(/\d/)) { // theirs an id in there
+      if (key.match(/\.\d/)) { // theirs an id in there
         delete counters[key];
       } else {
         counters[key] = 0;

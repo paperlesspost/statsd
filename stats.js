@@ -69,7 +69,7 @@ var Statsd = {
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'value', value, ts) + "\n";
       message += makeGraphiteKey('stats.counters', key, config.hostname, 'count', counters[key], ts) + "\n";
       statString += message;
-      delete counters[key];
+      counters[key] = 0;
 
       numStats += 1;
     }

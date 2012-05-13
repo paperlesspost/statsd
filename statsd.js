@@ -225,17 +225,21 @@ var Statsd = {
     var dump = fs.createReadStream(filename, {start: start || 0});
     var bytesRead = 0;
     var endbuff = '';
+    var stagger = 1;
     var transmit = function(buffer, cb) {
       console.log('> transmit');
       var sending = buffer.join("\n");
       console.log('--- Sending ', sending.length);
       bytesRead += sending.length;
       console.log('bytesRead', bytesRead);
-      Statsd.sendToGraphite(sending, function(wrote) {
-        if (cb) {
-          cb(bytesRead);
-        }
-      });
+      setTimeout(function() {
+        Statsd.sendToGraphite(sending, function(wrote) {
+          if (cb) {
+            cb(bytesRead);
+          }
+        });
+        stagger += 1;
+      }, stagger * 5000);
     };
     dump.on('end', function() {
       console.log('> end');

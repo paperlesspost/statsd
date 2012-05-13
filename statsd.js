@@ -3,7 +3,6 @@ var dgram  = require('dgram'),
  net    = require('net'),
  fs     = require('fs');
 
-
 var counters = {};
 var timers = {};
 var gauges = {};
@@ -223,19 +222,19 @@ var Statsd = {
 
   readFromDumpFile: function(filename, start, callback) {
     var dump = fs.createReadStream(filename, {start: start || 0});
-    var bytesRead = 0;
+    var linesRead = 0;
     var endbuff = '';
     var stagger = 1;
     var transmit = function(buffer, cb) {
       console.log('> transmit');
       var sending = buffer.join("\n");
       console.log('--- Sending ', sending.length);
-      bytesRead += sending.length;
-      console.log('bytesRead', bytesRead);
+      linesRead += buffer.length;
+      console.log('linesRead', linesRead);
       setTimeout(function() {
         Statsd.sendToGraphite(sending, function(wrote) {
           if (cb) {
-            cb(bytesRead);
+            cb(linesRead);
           }
         });
         stagger += 1;
@@ -250,7 +249,7 @@ var Statsd = {
       var s = data.toString();
       console.log('> data', s);
       var l = s.length;
-      var lines = s.split(/\r\n|\r|\n/);
+      var lines = s.split(/\n/);
       if (lines.length > 0) {
         lines[0] = endbuff + lines[0];
         endbuff = lines.pop();

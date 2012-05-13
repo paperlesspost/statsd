@@ -1,4 +1,5 @@
 var Statsd = require('./statsd').Statsd;
+var exec = require('child_process').exec;
 
 
 var node = process.argv.shift();
@@ -15,6 +16,9 @@ var config = require(config_file).config;
 Statsd.config = config;
 
 Statsd.readFromDumpFile(dumpfile, start, function(read) {
-  console.log('Finished read ', read, 'bytes');
-  process.exit(0);
+  console.log('Finished read ', read, 'lines');
+  // truncate the file to read bytes
+  exec(['tail -n +', read, ' ', dumpfile, ' > ', dumpfile + '.tmp'].join(''), function(err, stdout, stderr) {
+    process.exit(err ? 1 : 0);
+  });
 });

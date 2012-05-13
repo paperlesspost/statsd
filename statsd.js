@@ -247,8 +247,8 @@ var Statsd = {
     });
     dump.on('data', function(data) {
       var s = data.toString();
-      console.log('> data', s);
       var l = s.length;
+      console.log('data', l);
       var lines = s.split(/\n/);
       if (lines.length > 0) {
         lines[0] = endbuff + lines[0];

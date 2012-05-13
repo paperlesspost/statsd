@@ -227,6 +227,38 @@ var Statsd = {
     } else {
       console.log(statString);
     }
+  },
+
+  readFromDumpFile: function(filename, start, callback) {
+    var dump = fs.createReadStream(filename, {start: start || 0});
+    var bytesRead = 0;
+    var buffer = [], endbuff = '';
+    var transmit = function(cb) {
+      console.debug('Transmiting');
+      var sending = buffer.join('\n');
+      buffer = [];
+      console.log('Sending ', sending.length);
+      bytesRead += sending.length;
+      Statsd.sendToGraphite(sending);
+      console.log('bytesRead', bytesRead);
+      if (cb) { cb(bytesRead); }
+    };
+    dump.on('close', function() {
+      buffer.push(endbuff);
+      endbuff = '';
+      transmit(callback);
+    });
+    dump.on('data', function(data) {
+      var s = data.toString();
+      var l = s.length;
+      var lines = s.split(/\r\n|\r|\n/);
+      if (lines.length > 0) {
+        lines[0] = endbuff + lines[0];
+        endbuff = lines.pop();
+        buffer.concat(lines);
+        transmit();
+      }
+    });
   }
 };
 

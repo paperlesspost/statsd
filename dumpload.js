@@ -19,20 +19,25 @@ Statsd.config = config;
 //
 // head -1000 input > output && tail -n +1000 input > input.tmp && cp input.tmp input && rm input.tmp
 
-function readChunkFromFile = function(chunkSize) {
+function readChunkFromFile(chunkSize) {
   var stat = fs.statSync(dumpfile);
   if (stat.size > 0) {
     exec(['head -', chunkSize, ' ', dumpfile, ' > ', dumpfile, '.reading && tail -n +', chunkSize, ' ', dumpfile, ' > ', dumpfile, '.tmp && cp ', dumpfile, '.tmp ', dumpfile, ' && rm ', dumpfile, '.tmp'].join(''), function(err, stdout, stderr) {
-      if (error) {
+      if (err) {
         throw(stderr);
       } else {
-        Statsd.readFromDumpFile(dumpfile, start, function(read) {
+        Statsd.readFromDumpFile(dumpfile + '.reading', start, function(read) {
           console.log('Finished read ', read, 'lines');
           readChunkFromFile(chunkSize);
         });
       }
     });
-  });
+  } else {
+    console.log('Done');
+    setTimeout(function() {
+      process.exit(0);
+    }, 10000);
+  }
 };
 
 readChunkFromFile(10000);

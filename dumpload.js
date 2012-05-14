@@ -1,5 +1,6 @@
 var Statsd = require('./statsd').Statsd;
-var exec = require('child_process').exec;
+var exec = require('child_process').exec,
+    fs = require('fs');
 
 
 var node = process.argv.shift();
@@ -15,10 +16,23 @@ var config = require(config_file).config;
 
 Statsd.config = config;
 
-Statsd.readFromDumpFile(dumpfile, start, function(read) {
-  console.log('Finished read ', read, 'lines');
-  // truncate the file to read bytes
-  exec(['tail -n +', read, ' ', dumpfile, ' > ', dumpfile + '.tmp'].join(''), function(err, stdout, stderr) {
-    process.exit(err ? 1 : 0);
+//
+// head -1000 input > output && tail -n +1000 input > input.tmp && cp input.tmp input && rm input.tmp
+
+function readChunkFromFile = function(chunkSize) {
+  var stat = fs.statSync(dumpfile);
+  if (stat.size > 0) {
+    exec(['head -', chunkSize, ' ', dumpfile, ' > ', dumpfile, '.reading && tail -n +', chunkSize, ' ', dumpfile, ' > ', dumpfile, '.tmp && cp ', dumpfile, '.tmp ', dumpfile, ' && rm ', dumpfile, '.tmp'].join(''), function(err, stdout, stderr) {
+      if (error) {
+        throw(stderr);
+      } else {
+        Statsd.readFromDumpFile(dumpfile, start, function(read) {
+          console.log('Finished read ', read, 'lines');
+          readChunkFromFile(chunkSize);
+        });
+      }
+    });
   });
-});
+};
+
+readChunkFromFile(10000);

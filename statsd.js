@@ -24,9 +24,9 @@ var Statsd = {
   flushInt: null,
 
   start: function(config) {
-    this.config = config;
-    this.flushInterval = this.config.flushInterval || 10000;
-    this.port = this.config.port || 8125;
+    Statsd.config = config;
+    this.flushInterval = Statsd.config.flushInterval || 10000;
+    this.port = Statsd.config.port || 8125;
     console.log('Statsd starting', Date().toString());
     if (!this.server) {
       this.server = dgram.createSocket('udp4', this.handleUDPMessage);
@@ -55,8 +55,8 @@ var Statsd = {
     for (key in counters) {
       var value = counters[key] / (this.flushInterval / 1000);
       var message = "";
-      message += makeGraphiteKey('stats.counters', key, this.config.hostname, 'value', value, ts) + "\n";
-      message += makeGraphiteKey('stats.counters', key, this.config.hostname, 'count', counters[key], ts) + "\n";
+      message += makeGraphiteKey('stats.counters', key, Statsd.config.hostname, 'value', value, ts) + "\n";
+      message += makeGraphiteKey('stats.counters', key, Statsd.config.hostname, 'count', counters[key], ts) + "\n";
       statString += message;
       if (key.match(/\.\d/)) { // theirs an id in there
         delete counters[key];
@@ -71,7 +71,7 @@ var Statsd = {
       if (timers[key].length > 0) {
         var timer = timers[key];
         timers[key] = [];
-        var percents = this.config.percents || [10,50,90];
+        var percents = Statsd.config.percents || [10,50,90];
 
         var values = timer.sort(function (a,b) { return a-b; });
         var count = values.length;
@@ -90,12 +90,12 @@ var Statsd = {
         var mean = sum / count;
 
         var message = "";
-        message += makeGraphiteKey('stats.timers', key, this.config.hostname, 'min', min, ts) + "\n";
-        message += makeGraphiteKey('stats.timers', key, this.config.hostname, 'max', max, ts) + "\n";
-        message += makeGraphiteKey('stats.timers', key, this.config.hostname, 'mean', mean, ts) + "\n";
-        message += makeGraphiteKey('stats.timers', key, this.config.hostname, 'count', count, ts) + "\n";
+        message += makeGraphiteKey('stats.timers', key, Statsd.config.hostname, 'min', min, ts) + "\n";
+        message += makeGraphiteKey('stats.timers', key, Statsd.config.hostname, 'max', max, ts) + "\n";
+        message += makeGraphiteKey('stats.timers', key, Statsd.config.hostname, 'mean', mean, ts) + "\n";
+        message += makeGraphiteKey('stats.timers', key, Statsd.config.hostname, 'count', count, ts) + "\n";
         for (var i in percent_values) {
-          message += makeGraphiteKey('stats.timers', key, this.config.hostname, i, percent_values[i], ts) + "\n";
+          message += makeGraphiteKey('stats.timers', key, Statsd.config.hostname, i, percent_values[i], ts) + "\n";
         }
         statString += message;
 
@@ -111,15 +111,15 @@ var Statsd = {
        gauges_sent[key] = true;
     }
 
-    statString += makeGraphiteKey('statsd', this.config.hostname, 'numStats', numStats, ts) + "\n";
-    statString += makeGraphiteKey('statsd', this.config.hostname, 'statString', statString.length, ts) + "\n";
+    statString += makeGraphiteKey('statsd', Statsd.config.hostname, 'numStats', numStats, ts) + "\n";
+    statString += makeGraphiteKey('statsd', Statsd.config.hostname, 'statString', statString.length, ts) + "\n";
 
     return statString;
   },
 
   sendToGraphite: function(statString, callback) {
     try {
-      var pipeline = this.config.pipeline || 5;
+      var pipeline = Statsd.config.pipeline || 5;
       var statsd = this;
       statsd.pipeline = statsd.pipeline || 0;
       var close = function(graphite) {
@@ -138,7 +138,7 @@ var Statsd = {
         if (callback) { callback(true); }
       };
       if (!statsd.graphite) {
-        statsd.graphite = net.createConnection(this.config.graphitePort, this.config.graphiteHost);
+        statsd.graphite = net.createConnection(Statsd.config.graphitePort, this.config.graphiteHost);
         statsd.graphite.on('error', function(err) {
           //log error'd stats in case we want to get them later
           //this is a common case - we shouldn't go down just because graphite is down
@@ -164,7 +164,7 @@ var Statsd = {
   },
 
   handleUDPMessage: function (msg, rinfo) {
-    if (this.config.dumpMessages) { console.log(msg.toString()); }
+    if (Statsd.config.dumpMessages) { console.log(msg.toString()); }
     var bits = msg.toString().split(':');
     var key = bits.shift()
                   .replace(/\s+/g, '_')
@@ -210,11 +210,11 @@ var Statsd = {
   },
 
   writeToDumpFile: function(statString) {
-    if (this.config.dumpFile) {
-      this.dumpStream = this.dumpStream || fs.createWriteStream(this.config.dumpFile, {flags: 'a', encoding: 'utf8', mode: 0666});
+    if (Statsd.config.dumpFile) {
+      this.dumpStream = this.dumpStream || fs.createWriteStream(Statsd.config.dumpFile, {flags: 'a', encoding: 'utf8', mode: 0666});
       this.dumpStream.write("\n");
       this.dumpStream.write(statString);
-      console.log('Wrote ', statString.length, 'to', this.config.dumpFile);
+      console.log('Wrote ', statString.length, 'to', Statsd.config.dumpFile);
     } else {
       console.log(statString);
     }

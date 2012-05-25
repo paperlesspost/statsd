@@ -39,7 +39,10 @@ var Statsd = {
         var statString = statsd.processStats();
         statsd.logStatus(statString);
         process.nextTick(function() {
-          statsd.sendToGraphite(statString);
+          var i = 0, l = Statsd.config.graphite.length;
+          for (;i<l;i++) {
+            statsd.sendToGraphite(Statsd.config.graphite[i].host, Statsd.config.graphite[i].port, statString);
+          }
         });
       }, this.flushInterval);
       console.log("Flushing to graphite every", this.flushInterval);
@@ -117,15 +120,17 @@ var Statsd = {
     return statString;
   },
 
-  sendToGraphite: function(statString, callback) {
+  sendToGraphite: function(host, port, statString, callback) {
     try {
       var pipeline = Statsd.config.pipeline || 5;
       var statsd = this;
+      var name = host + ":" + port;
       statsd.pipeline = statsd.pipeline || 0;
+      statsd.graphite = statsd.graphite || {};
       var close = function(graphite) {
         console.log('Closing connection to graphite');
         graphite.end();
-        delete statsd['graphite'];
+        delete statsd['graphite'][name];
       };
       var write = function(graphite) {
         graphite.write(statString);
@@ -137,9 +142,9 @@ var Statsd = {
         }
         if (callback) { callback(true); }
       };
-      if (!statsd.graphite) {
-        statsd.graphite = net.createConnection(Statsd.config.graphitePort, this.config.graphiteHost);
-        statsd.graphite.on('error', function(err) {
+      if (!statsd.graphite[name]) {
+        statsd.graphite[name] = net.createConnection(port, host);
+        statsd.graphite[name].on('error', function(err) {
           //log error'd stats in case we want to get them later
           //this is a common case - we shouldn't go down just because graphite is down
           console.log('error', err);
@@ -147,14 +152,14 @@ var Statsd = {
           if (callback) { callback(false); }
           close(this);
         });
-        statsd.graphite.on('end', function() { close(this); });
-        statsd.graphite.on('close', function() { close(this); });
-        statsd.graphite.on('connect', function() {
+        statsd.graphite[name].on('end', function() { close(this); });
+        statsd.graphite[name].on('close', function() { close(this); });
+        statsd.graphite[name].on('connect', function() {
           console.log('Opened new connection to graphite');
           write(this);
         });
       } else {
-        write(statsd.graphite);
+        write(statsd.graphite[name]);
       }
     } catch(e){
       //log error'd stats in case we want to get them later
@@ -232,7 +237,7 @@ var Statsd = {
       linesRead += buffer.length;
       console.log('linesRead', linesRead);
       setTimeout(function() {
-        Statsd.sendToGraphite(sending, function(wrote) {
+        Statsd.sendToGraphite(config.graphite[0].host, config.graphite[0].port, sending, function(wrote) {
           if (cb) {
             cb(linesRead);
           }
